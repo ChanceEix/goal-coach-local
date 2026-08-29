@@ -9,6 +9,10 @@
   <img alt="Frontend" src="https://img.shields.io/badge/Frontend-Vanilla_JS-informational.svg" />
   <img alt="Charts" src="https://img.shields.io/badge/Charts-ECharts-informational.svg" />
   <img alt="Data" src="https://img.shields.io/badge/Data-Local_First-informational.svg" />
+  <img alt="GitHub stars" src="https://img.shields.io/github/stars/ChanceEix/goal-coach-local?style=flat&color=gold" />
+  <img alt="GitHub forks" src="https://img.shields.io/github/forks/ChanceEix/goal-coach-local?style=flat&color=blue" />
+  <img alt="GitHub issues" src="https://img.shields.io/github/issues/ChanceEix/goal-coach-local?style=flat&color=critical" />
+  <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/ChanceEix/goal-coach-local?style=flat&color=informational" />
 </p>
 
 ## 核心主张 · 为什么可以放心用
