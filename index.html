@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人生罗盘 · 本地优先的 OKR 目标管理工作台</title>
+<meta name="description" content="人生罗盘 —— 使命/愿景/价值观 → 目标O → 关键结果KR → 任务，三层承接的个人目标管理工作台。数据只存你自己电脑里。">
+<style>
+  :root{
+    --bg:#f0ede6; --card:#fbfaf6; --ink:#35312b; --ink-soft:#6f6a61;
+    --accent:#d97757; --line:#e1ded2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink); min-height:100vh;
+    display:flex; align-items:center; justify-content:center; padding:40px 20px;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+  }
+  .wrap{max-width:560px;width:100%}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:44px 40px; text-align:center; box-shadow:0 2px 16px rgba(53,49,43,.06);
+  }
+  .logo{
+    width:64px;height:64px;border-radius:18px;margin:0 auto 22px;
+    background:rgba(217,119,87,.12); display:flex;align-items:center;justify-content:center;
+    font-size:32px; line-height:1;
+  }
+  h1{font-size:26px;font-weight:600;letter-spacing:.5px;margin-bottom:10px}
+  .sub{font-size:15px;color:var(--ink-soft);line-height:1.75;margin-bottom:28px}
+  .sub b{color:var(--accent);font-weight:600}
+  .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn{
+    display:inline-block;padding:12px 26px;border-radius:10px;font-size:15px;
+    text-decoration:none;transition:transform .15s ease,box-shadow .15s ease;
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(53,49,43,.12)}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .tip{margin-top:24px;font-size:13px;color:var(--ink-soft)}
+  .tip span{color:var(--accent);font-weight:600}
+  @media(max-width:480px){
+    .card{padding:34px 24px}
+    h1{font-size:22px}
+    .btn{width:100%}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="logo">🧭</div>
+      <h1>人生罗盘</h1>
+      <p class="sub">
+        使命 → 愿景 → 价值观<br>
+        目标 O → 关键结果 KR → 任务<br>
+        <b>你的数据，只属于你。全部存在本地，不上传任何服务器。</b>
+      </p>
+      <div class="btns">
+        <a class="btn btn-primary" href="preview.html">看看长什么样 →</a>
+        <a class="btn btn-ghost" href="https://github.com/ChanceEix/goal-coach-local">GitHub 仓库</a>
+      </div>
+      <p class="tip"><span id="sec">3</span> 秒后自动进入预览…</p>
+    </div>
+  </div>
+<script>
+  var n = 3, el = document.getElementById('sec');
+  var t = setInterval(function(){
+    n--; el.textContent = Math.max(n,0);
+    if(n <= 0){ clearInterval(t); location.href = 'preview.html'; }
+  }, 1000);
+</script>
+</body>
+</html>
