@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 3211;
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'goals.json');
 const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
+const EXAMPLE_FILE = path.join(DATA_DIR, 'goals.example.json');
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -20,6 +21,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 function ensureData() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(DATA_FILE)) {
+    // 首次运行：仓库自带示例数据时直接沿用，避免新用户打开是一片空白
+    if (fs.existsSync(EXAMPLE_FILE)) {
+      try {
+        const sample = JSON.parse(fs.readFileSync(EXAMPLE_FILE, 'utf8'));
+        fs.writeFileSync(DATA_FILE, JSON.stringify(sample, null, 2), 'utf8');
+        console.log('   首次运行：已载入示例数据（可在界面里删掉，从零开始）');
+        return;
+      } catch (e) {
+        console.warn('   示例数据读取失败，改为创建空数据：' + e.message);
+      }
+    }
     fs.writeFileSync(DATA_FILE, JSON.stringify({ goals: [], vvm: { vision: '', values: [], missions: [] } }, null, 2), 'utf8');
   }
 }

@@ -1,0 +1,183 @@
+{
+  "goals": [
+    {
+      "id": "sample_o1",
+      "name": "3个月内入门Python数据分析",
+      "level": "目标O",
+      "parentId": "",
+      "status": "进行中",
+      "progress": 60,
+      "priority": "P0",
+      "deadline": "2026-11-23",
+      "hours": 8,
+      "note": "pandas处理数据练得顺手了",
+      "obstacle": "电脑配置慢，跑Jupyter卡",
+      "next": "本周内跑通一个pandas实战",
+      "missionId": "s1",
+      "createdAt": 1758611000000
+    },
+    {
+      "id": "sample_c1",
+      "name": "KR1 学完Python基础语法",
+      "level": "关键结果KR",
+      "parentId": "sample_o1",
+      "status": "已完成",
+      "progress": 100,
+      "deadline": "",
+      "hours": 4,
+      "note": "基础语法已过一遍",
+      "obstacle": "列表推导式不熟",
+      "next": "本周练熟列表推导",
+      "createdAt": 1758611010000
+    },
+    {
+      "id": "sample_s1",
+      "name": "装好Anaconda",
+      "level": "任务",
+      "parentId": "sample_c1",
+      "status": "已完成",
+      "progress": 100,
+      "deadline": "2026-08-24",
+      "hours": 2,
+      "note": "环境装好了",
+      "obstacle": "下载源慢",
+      "next": "换镜像源重装",
+      "createdAt": 1758611020000
+    },
+    {
+      "id": "sample_s2",
+      "name": "跑通Jupyter笔记本",
+      "level": "任务",
+      "parentId": "sample_c1",
+      "status": "已完成",
+      "progress": 100,
+      "deadline": "2026-08-25",
+      "hours": 2,
+      "note": "已跑通第一个单元格",
+      "obstacle": "显卡驱动",
+      "next": "装好cuda",
+      "createdAt": 1758611030000
+    },
+    {
+      "id": "sample_c2",
+      "name": "KR2 上手pandas处理数据",
+      "level": "关键结果KR",
+      "parentId": "sample_o1",
+      "status": "进行中",
+      "progress": 55,
+      "deadline": "",
+      "hours": 3,
+      "note": "能做聚合分析",
+      "obstacle": "",
+      "next": "",
+      "createdAt": 1758611050000
+    },
+    {
+      "id": "sample_o2",
+      "name": "建立每周健身3次的习惯",
+      "level": "目标O",
+      "parentId": "",
+      "status": "进行中",
+      "progress": 70,
+      "priority": "P1",
+      "deadline": "2026-10-15",
+      "hours": 5,
+      "note": "第四周达标",
+      "obstacle": "加班多容易断",
+      "next": "固定周三/周五/周日训练",
+      "missionId": "s2",
+      "createdAt": 1758612000000
+    },
+    {
+      "id": "sample_c4",
+      "name": "KR1 养成每周至少3次的运动记录",
+      "level": "关键结果KR",
+      "parentId": "sample_o2",
+      "status": "进行中",
+      "progress": 60,
+      "deadline": "",
+      "hours": 4,
+      "note": "形成习惯",
+      "obstacle": "",
+      "next": "",
+      "createdAt": 1758612010000
+    },
+    {
+      "id": "sample_o3",
+      "name": "读完12本商业书",
+      "level": "目标O",
+      "parentId": "",
+      "status": "进行中",
+      "progress": 45,
+      "priority": "P2",
+      "deadline": "2026-12-31",
+      "hours": 4,
+      "note": "第5本过半",
+      "obstacle": "时间碎片化",
+      "next": "每天睡前30分钟阅读",
+      "missionId": "s1",
+      "createdAt": 1758613000000
+    },
+    {
+      "id": "sample_o4",
+      "name": "上线一个个人作品网站",
+      "level": "目标O",
+      "parentId": "",
+      "status": "进行中",
+      "progress": 35,
+      "priority": "",
+      "deadline": "",
+      "hours": 0,
+      "note": "开始搭首页框架",
+      "obstacle": "域名与备案流程耽搁",
+      "next": "年后优先处理",
+      "missionId": "s3",
+      "createdAt": 1758614000000
+    },
+    {
+      "id": "sample_o5",
+      "name": "学会做饭，每周下厨2次",
+      "level": "目标O",
+      "parentId": "",
+      "status": "已完成",
+      "progress": 100,
+      "priority": "",
+      "deadline": "2026-08-10",
+      "hours": 5,
+      "note": "第4道菜练熟",
+      "obstacle": "",
+      "next": "",
+      "missionId": "s2",
+      "createdAt": 1758615000000
+    }
+  ],
+  "vvm": {
+    "mission": "持续学习、真诚做事，让每天的工作都值得被时间检验。",
+    "vision": "成为一个专业过硬、身体在线、有代表作的人。",
+    "values": [
+      { "id": "v1", "text": "用证据说话，不靠想象" },
+      { "id": "v2", "text": "长期主义，拒绝捷径" },
+      { "id": "v3", "text": "言行一致，说到做到" }
+    ],
+    "missions": [
+      {
+        "id": "s1",
+        "title": "精进能力",
+        "desc": "持续学用输出，把能力练成可复用的方法",
+        "icon": "💪"
+      },
+      {
+        "id": "s2",
+        "title": "守住身体",
+        "desc": "规律作息加运动，让精力长期在线",
+        "icon": "🏃"
+      },
+      {
+        "id": "s3",
+        "title": "留下作品",
+        "desc": "沉淀经得起时间检验的成果，长期有人用",
+        "icon": "🎨"
+      }
+    ]
+  }
+}
