@@ -1,0 +1,30 @@
+# 依赖（不纳入版本控制，安装时自动生成）
+node_modules/
+
+# 本地私有数据（含个人使命/愿景/价值观与目标，勿上传）
+data/goals.json
+data/history.json
+data/*.backup_*.json
+
+# 私有备份（真实数据本地留存）
+.private-backup/
+
+# 环境变量（可能含密钥）
+.env
+.env.*
+
+# 日志 & 运行产物
+*.log
+server.log
+
+# 系统杂项
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器
+.vscode/
+.idea/
+
+# WorkBuddy 内部工作记忆（系统管理，勿上传）
+.workbuddy/

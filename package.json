@@ -1,0 +1,13 @@
+{
+  "name": "goal-coach-local",
+  "version": "1.0.0",
+  "description": "个人目标管理 · OKR 本地工作台",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5"
+  }
+}

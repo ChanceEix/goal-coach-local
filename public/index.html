@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人目标管理</title>
+<script src="/vendor/echarts.min.js"></script>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<script>window.PAGE_KEY = 'overview';</script>
+
+<div class="layout">
+  <!-- 左侧菜单 -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <!-- 主内容 -->
+  <main class="content">
+    <div class="topbar">
+      <div class="page-title">
+        <h2>总览</h2>
+        <div class="sub">先看清方向，再聚焦今天</div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" onclick="openNew('目标O','')">＋ 新目标</button>
+        <button class="btn ghost" onclick="load()">↻</button>
+      </div>
+    </div>
+
+    <div class="vvm-banner" id="vvmBanner"></div>
+
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-icon c1">🎯</div><div><div class="v" id="kpiObj">0</div><div class="l">目标总数</div></div></div>
+      <div class="kpi"><div class="kpi-icon c2">🚀</div><div><div class="v" id="kpiDoing">0</div><div class="l">进行中</div></div></div>
+      <div class="kpi"><div class="kpi-icon c3">📈</div><div><div class="v" id="kpiAvg">0<small>%</small></div><div class="l">平均完成度</div></div></div>
+      <div class="kpi"><div class="kpi-icon c4">⏳</div><div><div class="v" id="kpiHours">0<small>h</small></div><div class="l">本周投入</div></div></div>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-box"><h3>状态分布</h3><div class="desc">各目标所处状态</div><div id="chartStatus"></div></div>
+      <div class="chart-box"><h3>本周投入</h3><div class="desc">每个目标投入小时</div><div id="chartHours"></div></div>
+    </div>
+
+    <div class="section-title">
+      <h3>🎯 本周围绕 P0 聚焦</h3>
+      <span class="hint">按「优先级 → 期限近的在前」排序的进行中目标</span>
+    </div>
+    <div class="cards" id="tree"></div>
+  </main>
+</div>
+
+<div class="modal-mask" id="mask">
+  <div class="modal">
+    <h3 id="modalTitle">新增</h3>
+    <div id="modalBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/common.js"></script>
+<script>
+let all = [];
+let vvm = { vision: '', values: [], missions: [] };
+
+async function load() {
+  try {
+    [all, vvm] = await Promise.all([loadGoals(), loadVVM()]);
+    render();
+  } catch (e) {
+    document.getElementById('tree').innerHTML = '<div class="empty">⚠️ 无法连接后端，请运行 node server.js</div>';
+  }
+}
+
+function render() {
+  renderVVM();
+  const objs = all.filter(g => g.level === '目标O');
+  const total = objs.length;
+  const doing = objs.filter(o => o.status === '进行中').length;
+  const active = objs.filter(o => !['已完成','已放弃'].includes(o.status));
+  const avg = active.length ? Math.round(active.reduce((s, o) => s + (+o.progress || 0), 0) / active.length) : 0;
+  const hrs = all.reduce((s, g) => s + (+g.hours || 0), 0);
+
+  document.getElementById('kpiObj').textContent = total;
+  document.getElementById('kpiDoing').textContent = doing;
+  document.getElementById('kpiAvg').innerHTML = avg + '<small>%</small>';
+  document.getElementById('kpiHours').innerHTML = hrs + '<small>h</small>';
+
+  // 主列表：进行中 + 暂停（非归档），按优先级排序
+  const mainObjs = [...active].sort((a, b) => objRank(a) - objRank(b));
+  document.getElementById('tree').innerHTML = mainObjs.length
+    ? mainObjs.map(o => renderCard(o, all.filter(g => g.parentId === o.id))).join('')
+    : '<div class="empty">暂无进行中的目标，点右上角「＋新目标」开始 🎯</div>';
+
+  renderCharts(objs);
+}
+
+function renderVVM() {
+  const b = document.getElementById('vvmBanner');
+  if (!b) return;
+  if (!(vvm.vision || vvm.mission || (vvm.missions || []).length)) {
+    b.innerHTML = `<div class="v-row"><span class="v-ico">🧭</span>
+      <div><div class="v-tag">还没设定方向</div>
+      <div class="v-sub"><a href="mission.html" style="color:var(--accent);font-weight:600">点这里</a> 写下你的使命、愿景与价值观，让目标有根。</div></div></div>`;
+    return;
+  }
+  const mChips = (vvm.missions || []).map(m => `<span class="m-chip"><i></i>${m.icon || '🧱'} ${esc(m.title)}</span>`).join('');
+  b.innerHTML = `
+    <div class="v-row"><span class="v-ico">🧭</span>
+      <div>
+        <div class="v-tag">愿景 · 未来成为什么样</div>
+        <div class="v-text">${vvm.vision ? esc(vvm.vision) : '（还没写愿景）'}</div>
+      </div>
+    </div>
+    ${mChips ? `<div class="m-row">${mChips}</div>` : ''}`;
+}
+
+function renderCard(o, krs) {
+  const p = +o.progress || 0;
+  const pr = o.priority || '无';
+  const krHtml = krs.map((kr, i) => renderKr(kr, i + 1)).join('');
+  const m = (vvm.missions || []).find(x => x.id === o.missionId);
+  const ringColor = (pr === 'P0' && p < 100) ? 'var(--p0)' : (pr === 'P1' && p < 100) ? 'var(--p1)' : (pr === 'P2' && p < 100) ? 'var(--p2)' : 'var(--blue)';
+  return `<div class="card ${pr}">
+    <div class="card-head" onclick="locate('${o.id}')">
+      <div class="ring">${ring(p, p >= 100 ? 'var(--green)' : ringColor, p + '%')}</div>
+      <div class="card-mid">
+        <div class="card-name">
+          ${esc(o.name)}
+          ${pr !== '无' ? `<span class="pr-badge ${pr}">${pr}</span>` : ''}
+        </div>
+        <div class="card-tags">
+          <span class="pill ${esc(o.status)}">${esc(o.status)}</span>
+          <span class="pill deadline ${late(o.deadline) ? 'late' : ''}">🗓 ${deadlinePill(o.deadline)}</span>
+          <span class="pill muted">⏱ ${+o.hours || 0}h</span>
+          ${m ? `<span class="pill mission">${m.icon || '🧭'} ${esc(m.title)}</span>` : ''}
+        </div>
+      </div>
+      <div class="chev">▾</div>
+    </div>
+    <div class="card-body">
+      <div class="kr-actions">
+        <button class="btn primary sm" onclick="openNew('关键结果KR','${o.id}')">＋ 关键结果</button>
+        <button class="btn ghost sm" onclick="editItem('${o.id}')">✎ 编辑目标</button>
+      </div>
+      ${krs.length ? `<div class="krs">${krHtml}</div>` : '<div class="empty" style="padding:20px 0">还没有关键结果，点「＋ 关键结果」拆解 🎯</div>'}
+    </div>
+  </div>`;
+}
+
+function renderKr(kr, idx) {
+  const tasks = all.filter(g => g.parentId === kr.id);
+  const p = +kr.progress || 0;
+  const taskHtml = tasks.map(t => renderTask(t)).join('');
+  return `<div class="kr">
+    <div class="kr-head">
+      <div class="kr-name">${esc(kr.name)} <span class="pill ${esc(kr.status)}">${esc(kr.status)}</span></div>
+      <div class="kr-btns">
+        <button class="btn primary sm" onclick="openNew('任务','${kr.id}')">＋</button>
+        <button class="icon-btn" onclick="editItem('${kr.id}')">✎</button>
+        <button class="icon-btn" onclick="delItem('${kr.id}', all)">🗑</button>
+      </div>
+    </div>
+    <div class="kr-prog">
+      <div class="bar"><i style="width:${p}%"></i></div>
+      <span class="pct">${p}%</span>
+    </div>
+    ${taskHtml ? `<div class="tasks">${taskHtml}</div>` : '<div style="font-size:12px;color:var(--muted);padding:4px 2px">暂无任务</div>'}
+  </div>`;
+}
+
+function renderTask(t) {
+  const done = t.status === '已完成';
+  const p = +t.progress || 0;
+  return `<div class="task ${done ? 'done' : ''}">
+    <div class="dot" onclick="toggleTask('${t.id}')">${done ? '✓' : ''}</div>
+    <div class="task-name">${esc(t.name)}</div>
+    <div class="t-progress"><div class="f" style="width:${p}%"></div></div>
+    <div class="t-deadline ${late(t.deadline) ? 'late' : ''}">${t.deadline || '—'}</div>
+    <div class="t-actions">
+      <button class="icon-btn" onclick="editItem('${t.id}')">✎</button>
+      <button class="icon-btn" onclick="delItem('${t.id}', all)">🗑</button>
+    </div>
+  </div>`;
+}
+
+async function toggleTask(id) {
+  const g = all.find(x => x.id === id); if (!g) return;
+  const done = g.status !== '已完成';
+  await fetch(API + '/goals/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: done ? '已完成' : '进行中', progress: done ? 100 : (g.progress || 0) }) });
+  load();
+}
+
+function locate(id) {
+  // 跳到目标管理页并展开该目标
+  location.href = 'goals.html?focus=' + id;
+}
+
+let statusChart, hoursChart;
+function renderCharts(objs) {
+  const names = ['进行中', '已完成', '暂停', '已放弃'];
+  const vals = names.map(n => objs.filter(o => o.status === n).length);
+  const colors = { '进行中': '#5b7fc4', '已完成': '#4f9d5e', '暂停': '#cf9245', '已放弃': '#cd6b58' };
+  const show = names.filter((n, i) => vals[i] > 0);
+  statusChart = statusChart || echarts.init(document.getElementById('chartStatus'));
+  statusChart.setOption({
+    tooltip: { trigger: 'item' }, legend: { bottom: 0, textStyle: { color: '#8f8a7e' } },
+    series: [{ type: 'pie', radius: ['46%', '70%'], center: ['50%', '44%'],
+      data: show.map(n => ({ name: n, value: vals[names.indexOf(n)], itemStyle: { color: colors[n] } })),
+      label: { color: '#35312b', fontSize: 12 }, labelLine: { lineStyle: { color: '#a09a8c' } } }]
+  }, true);
+
+  hoursChart = hoursChart || echarts.init(document.getElementById('chartHours'));
+  hoursChart.setOption({
+    grid: { left: 8, right: 26, top: 24, bottom: 8, containLabel: true }, tooltip: { trigger: 'axis' },
+    xAxis: { type: 'value', axisLabel: { color: '#8f8a7e' }, splitLine: { lineStyle: { color: '#e1ded2' } }, axisLine: { lineStyle: { color: '#e1ded2' } } },
+    yAxis: { type: 'category', data: objs.map(o => o.name), axisLabel: { color: '#35312b' }, axisLine: { lineStyle: { color: '#e1ded2' } } },
+    series: [{ type: 'bar', data: objs.map(o => +o.hours || 0), barWidth: 13, itemStyle: { color: '#d97757', borderRadius: [7, 7, 0, 0] }, label: { show: true, position: 'right', color: '#35312b' } }]
+  }, true);
+}
+
+window.__appReload = load;
+window.addEventListener('resize', () => { statusChart && statusChart.resize(); hoursChart && hoursChart.resize(); });
+load();
+</script>
+</body>
+</html>

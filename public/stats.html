@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人目标管理</title>
+<script src="/vendor/echarts.min.js"></script>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<script>window.PAGE_KEY = 'stats';</script>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div class="page-title">
+        <h2>数据统计</h2>
+        <div class="sub">完成度 · 优先级 · 投入结构分布</div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" onclick="load()">↻</button>
+      </div>
+    </div>
+
+    <!-- 关键统计 -->
+    <div class="kpi-row">
+      <div class="kpi stat-big"><div class="n" id="sTotal">0</div><div class="t">目标总数</div></div>
+      <div class="kpi stat-big lead"><div class="n" id="sAvg">0<small style="font-size:22px">%</small></div><div class="t">进行中平均完成度</div></div>
+      <div class="kpi stat-big"><div class="n" id="sHours">0<small style="font-size:22px">h</small></div><div class="t">累计本周投入</div></div>
+      <div class="kpi stat-big"><div class="n" id="sP0">0</div><div class="t">P0 高优目标</div></div>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-box"><h3>各目标完成度</h3><div class="desc">进度分率对比</div><div id="chartProgress"></div></div>
+      <div class="chart-box"><h3>优先级分布</h3><div class="desc">P0 / P1 / P2 / 无</div><div id="chartPrio"></div></div>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-box"><h3>投入结构</h3><div class="desc">各目标本周投入小时</div><div id="chartHours"></div></div>
+      <div class="chart-box"><h3>状态分布</h3><div class="desc">进行中 / 已完成 / 暂停 / 已放弃</div><div id="chartStatus"></div></div>
+    </div>
+
+    <div class="section-title">
+      <h3>📊 优先级结构</h3>
+      <span class="hint">目标层面的高优分布</span>
+    </div>
+    <div class="prio-stack" id="prioStack" style="margin-bottom:22px"></div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/common.js"></script>
+<script>
+let all = [];
+let chartProgress, chartPrio, chartHours, chartStatus;
+
+async function load() {
+  try {
+    all = await loadGoals();
+    render();
+  } catch (e) {
+    alert('无法连接后端，请运行 node server.js');
+  }
+}
+
+function render() {
+  const objs = all.filter(g => g.level === '目标O');
+  const active = objs.filter(o => !['已完成', '已放弃'].includes(o.status));
+  const total = objs.length;
+  const avg = active.length ? Math.round(active.reduce((s, o) => s + (+o.progress || 0), 0) / active.length) : 0;
+  const hrs = all.reduce((s, g) => s + (+g.hours || 0), 0);
+  const p0 = objs.filter(o => o.priority === 'P0').length;
+
+  document.getElementById('sTotal').textContent = total;
+  document.getElementById('sAvg').innerHTML = avg + '<small style="font-size:22px">%</small>';
+  document.getElementById('sHours').textContent = hrs;
+  document.getElementById('sP0').textContent = p0;
+
+  // 各目标完成度柱状图
+  chartProgress = chartProgress || echarts.init(document.getElementById('chartProgress'));
+  chartProgress.setOption({
+    grid: { left: 8, right: 20, top: 20, bottom: 8, containLabel: true }, tooltip: { trigger: 'axis' },
+    xAxis: { type: 'value', max: 100, axisLabel: { color: '#8f8a7e' }, splitLine: { lineStyle: { color: '#e1ded2' } }, axisLine: { lineStyle: { color: '#e1ded2' } } },
+    yAxis: { type: 'category', data: objs.map(o => o.name), axisLabel: { color: '#35312b' }, axisLine: { lineStyle: { color: '#e1ded2' } } },
+    series: [{ type: 'bar', data: objs.map(o => +o.progress || 0), barWidth: 13,
+      itemStyle: { borderRadius: [7, 7, 0, 0], color: '#d97757' },
+      label: { show: true, position: 'right', color: '#35312b' } }]
+  }, true);
+
+  // 优先级分布
+  const prioNames = ['P0', 'P1', 'P2', '无'];
+  const prioVals = prioNames.map(n => objs.filter(o => (o.priority || '无') === n).length);
+  const prioCols = { 'P0': '#c4553e', 'P1': '#b97f2e', 'P2': '#8f8a7e', '无': '#cfcabd' };
+  const prioShow = prioNames.filter((n, i) => prioVals[i] > 0);
+  chartPrio = chartPrio || echarts.init(document.getElementById('chartPrio'));
+  chartPrio.setOption({
+    tooltip: { trigger: 'item' }, legend: { bottom: 0, textStyle: { color: '#8f8a7e' } },
+    series: [{ type: 'pie', radius: '68%', center: ['50%', '46%'],
+      data: prioShow.map(n => ({ name: n, value: prioVals[prioNames.indexOf(n)], itemStyle: { color: prioCols[n] } })),
+      label: { color: '#35312b', fontSize: 12 }, labelLine: { lineStyle: { color: '#a09a8c' } } }]
+  }, true);
+
+  // 投入
+  chartHours = chartHours || echarts.init(document.getElementById('chartHours'));
+  chartHours.setOption({
+    grid: { left: 8, right: 26, top: 24, bottom: 8, containLabel: true }, tooltip: { trigger: 'axis' },
+    xAxis: { type: 'value', axisLabel: { color: '#8f8a7e' }, splitLine: { lineStyle: { color: '#e1ded2' } }, axisLine: { lineStyle: { color: '#e1ded2' } } },
+    yAxis: { type: 'category', data: objs.map(o => o.name), axisLabel: { color: '#35312b' }, axisLine: { lineStyle: { color: '#e1ded2' } } },
+    series: [{ type: 'bar', data: objs.map(o => +o.hours || 0), barWidth: 13, itemStyle: { color: '#5b7fc4', borderRadius: [7, 7, 0, 0] }, label: { show: true, position: 'right', color: '#35312b' } }]
+  }, true);
+
+  // 状态
+  const names = ['进行中', '已完成', '暂停', '已放弃'];
+  const vals = names.map(n => objs.filter(o => o.status === n).length);
+  const colors = { '进行中': '#5b7fc4', '已完成': '#4f9d5e', '暂停': '#cf9245', '已放弃': '#cd6b58' };
+  const show = names.filter((n, i) => vals[i] > 0);
+  chartStatus = chartStatus || echarts.init(document.getElementById('chartStatus'));
+  chartStatus.setOption({
+    tooltip: { trigger: 'item' }, legend: { bottom: 0, textStyle: { color: '#8f8a7e' } },
+    series: [{ type: 'pie', radius: ['46%', '70%'], center: ['50%', '44%'],
+      data: show.map(n => ({ name: n, value: vals[names.indexOf(n)], itemStyle: { color: colors[n] } })),
+      label: { color: '#35312b', fontSize: 12 }, labelLine: { lineStyle: { color: '#a09a8c' } } }]
+  }, true);
+
+  // 优先级结构条
+  const maxV = Math.max(...prioVals, 1);
+  document.getElementById('prioStack').innerHTML = prioNames.map((n, i) => {
+    const v = prioVals[i];
+    const pct = Math.round(v / maxV * 100);
+    const color = prioCols[n];
+    return `<div class="prio-row">
+      <span class="tag" style="color:${color}">${n}</span>
+      <div class="track"><i style="width:${pct}%;background:${color}"></i></div>
+      <span class="count">${v} 个目标</span>
+    </div>`;
+  }).join('');
+}
+
+window.__appReload = load;
+window.addEventListener('resize', () => {
+  chartProgress && chartProgress.resize();
+  chartPrio && chartPrio.resize();
+  chartHours && chartHours.resize();
+  chartStatus && chartStatus.resize();
+});
+load();
+</script>
+</body>
+</html>

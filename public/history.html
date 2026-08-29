@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人目标管理</title>
+<link rel="stylesheet" href="/app.css">
+<style>
+  .h-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .h-toolbar .h-filter { display:flex; gap:6px; flex-wrap:wrap; }
+  .h-toolbar .h-chip {
+    padding:6px 14px; border-radius:999px; border:1px solid var(--line,#e1ded2);
+    background:var(--card,#fbfaf6); cursor:pointer; font-size:13px; color:var(--ink,#35312b);
+  }
+  .h-toolbar .h-chip.on { background:var(--accent,#d97757); color:#fff; border-color:var(--accent,#d97757); }
+  .h-count { font-size:13px; color:var(--muted,#8f8a7e); margin-left:auto; }
+  .h-search { flex:1; min-width:160px; padding:7px 12px; border:1px solid var(--line,#e1ded2); border-radius:8px; font-size:13px; background:var(--card,#fbfaf6); color:var(--ink,#35312b); }
+  .empty { color:var(--muted,#8f8a7e); text-align:center; padding:40px 0; font-size:13px; }
+
+  /* 分区 */
+  .sec { margin-bottom:28px; }
+  .sec-title { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:500; color:var(--ink,#35312b); margin-bottom:14px; }
+  .sec-title .cnt { font-size:12px; color:var(--muted,#8f8a7e); font-weight:400; margin-left:auto; }
+
+  /* 通用折叠部件 */
+  .fold-name { font-size:13.5px; font-weight:600; color:var(--ink,#35312b); }
+  .fold-path { font-size:12px; color:var(--muted,#8f8a7e); }
+  .fold-meta { margin-left:auto; display:flex; align-items:center; gap:12px; }
+  .fold-meta-txt { font-size:11.5px; color:#8f8776; white-space:nowrap; }
+  .fold-count { font-size:11.5px; color:var(--muted,#8f8a7e); background:#ede9df; padding:4px 11px; border-radius:999px; line-height:1; }
+  .fold-chev { width:8px; height:8px; flex:none; border-right:1.5px solid #b3ab9b; border-bottom:1.5px solid #b3ab9b; transform:rotate(-45deg); margin-left:2px; transition:transform .2s; }
+
+  /* 语义图标（与坐标页一致：emoji + 彩色圆角衬底，配色对齐坐标页） */
+  .sig { width:32px; height:32px; flex:none; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; font-size:18px; line-height:1; }
+
+  /* 每种对象固定衬底色（对齐坐标页卡片） */
+  .sig.mission  { background:rgba(217,119,87,.16); }  /* 使命 · 陶土橙 */
+  .sig.vision   { background:rgba(79,157,94,.16); }   /* 愿景 · 绿 */
+  .sig.values   { background:rgba(91,127,196,.16); }  /* 价值观 · 蓝 */
+  .sig.pillar   { background:rgba(77,154,148,.16); }  /* 支柱 · 青 */
+  .sig.goal     { background:rgba(216,141,60,.18); }  /* 目标 · 琥珀 */
+
+  /* 可折叠对象卡片（每张表） */
+  .obj-fold { border:1px solid var(--line,#e1ded2); border-radius:14px; background:var(--card,#fbfaf6); margin-bottom:12px; overflow:hidden; }
+  .obj-fold > summary { cursor:pointer; list-style:none; display:flex; align-items:center; gap:12px; padding:14px 16px; transition:background .15s; }
+  .obj-fold > summary:hover { background:#faf7f1; }
+  .obj-fold > summary::-webkit-details-marker { display:none; }
+  .obj-fold[open] > summary .fold-chev { transform:rotate(45deg); }
+  .obj-fold > .obj-body { padding:0; }
+  /* 不折叠卡片头部（坐标基础用） */
+  .obj-fold > .obj-head { display:flex; align-items:center; gap:12px; padding:14px 16px; }
+  .obj-fold > .obj-head .fold-name { font-weight:600; }
+
+  /* 支柱组（愿景支柱容器，可折叠） */
+  .pillar-fold { border:1px solid var(--line,#e1ded2); border-radius:16px; background:var(--card,#fbfaf6); margin-bottom:16px; overflow:hidden; }
+  .pillar-fold > summary { cursor:pointer; list-style:none; padding:15px 16px; display:flex; align-items:center; gap:12px; transition:background .15s; }
+  .pillar-fold > summary:hover { background:#faf7f1; }
+  .pillar-fold > summary::-webkit-details-marker { display:none; }
+  .pillar-fold > summary .p-name { font-size:14px; font-weight:600; color:var(--ink,#35312b); }
+  .pillar-fold > summary .p-meta { font-size:12px; color:#6b6558; }
+  .pillar-fold[open] > summary .fold-chev { transform:rotate(45deg); }
+  .pillar-body { padding:14px 16px; }
+
+  /* 表格 */
+  .tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .tbl th { background:#f2efe7; color:#6b6558; text-align:left; padding:9px 14px; font-weight:600; font-size:12px; white-space:nowrap; border-bottom:1px solid var(--line,#e1ded2); }
+  .tbl td { padding:8px 14px; border-bottom:1px solid #eee9df; vertical-align:top; line-height:1.5; }
+  .tbl tbody tr:last-child td { border-bottom:none; }
+  .tbl tbody tr:hover { background:#faf6ee; }
+  .t-time { white-space:nowrap; color:var(--muted,#8f8a7e); }
+  .t-act { white-space:nowrap; font-size:12px; }
+  .t-act.up { color:#3b7d4a; }
+  .t-act.new { color:#185fa5; }
+  .t-act.del { color:#a13a2c; }
+  .t-k { color:#8f8a7e; white-space:nowrap; }
+  .t-from { color:#8f8a7e; }
+  .t-to { color:#3b7d4a; }
+
+  /* 层级小标签 */
+  .sub-tag { font-size:11px; padding:2px 9px; border-radius:6px; font-weight:500; color:#fff; margin-right:6px; white-space:nowrap; }
+  .sub-tag.o { background:#0f6e56; }
+  .sub-tag.p { background:#b97f2e; }
+  .sub-tag.kr { background:#185fa5; }
+  .sub-tag.task { background:#639922; }
+  @media (max-width:900px){ .h-count{display:none;} }
+</style>
+</head>
+<body>
+<script>window.PAGE_KEY = 'history';</script>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div class="page-title">
+        <h2>历史记录</h2>
+        <div class="sub">每一次修改都留下脚印 · 按对象分层回溯方向与目标的演变</div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" onclick="load()">↻ 刷新</button>
+      </div>
+    </div>
+
+    <div class="h-toolbar">
+      <div class="h-filter" id="hFilter"></div>
+      <input class="h-search" id="hSearch" placeholder="按关键词搜索…（如：愿景 / 目标名）" oninput="render()">
+      <span class="h-count" id="hCount"></span>
+      <button class="btn ghost sm" onclick="exportCsv()" title="导出当前筛选结果为CSV">⬇ 导出</button>
+    </div>
+
+    <div id="tlRoot"></div>
+  </main>
+</div>
+
+<script src="/common.js"></script>
+<script>
+let hist = [];
+let goals = [];
+let missions = [];
+let curFilter = 'all';
+let kw = '';
+
+const FILTERS = [
+  { k: 'all', t: '全部' },
+  { k: 'vvm', t: '坐标' },
+  { k: 'goal', t: '目标' },
+];
+const FIELD_LABEL = { name:'名称', level:'层级', status:'状态', progress:'完成度', priority:'优先级', deadline:'期限', hours:'投入时长', note:'进度记录', obstacle:'当前障碍', next:'下一步', missionId:'挂靠支柱', mission:'使命', vision:'愿景', pillar:'愿景支柱', values:'价值观' };
+
+async function load() {
+  try {
+    const [hd, gd, vd] = await Promise.all([
+      fetch(API + '/history').then(r => r.json()),
+      fetch(API + '/goals').then(r => r.json()),
+      fetch(API + '/vvm').then(r => r.json()),
+    ]);
+    hist = Array.isArray(hd) ? hd : [];
+    goals = (gd && gd.goals) ? gd.goals : [];
+    missions = (vd && vd.missions) ? vd.missions : [];
+    render();
+  } catch (e) {
+    document.getElementById('tlRoot').innerHTML = '<div class="empty">⚠️ 无法连接后端，请运行 node server.js</div>';
+  }
+}
+
+function renderFilter() {
+  const el = document.getElementById('hFilter');
+  el.innerHTML = FILTERS.map(f => `<span class="h-chip ${curFilter===f.k?'on':''}" onclick="setFilter('${f.k}')">${f.t}</span>`).join('');
+}
+function setFilter(k) { curFilter = k; render(); }
+
+function fmtTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const p = n => (n<10?'0':'')+n;
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function escaped(v) {
+  if (v === null || v === undefined || v === '') return '<span style="color:#c9c2b4">—</span>';
+  const s = String(v);
+  return esc(s.length > 44 ? s.slice(0, 44) + '…' : s);
+}
+
+function entryText(e, d) {
+  const parts = [];
+  if (e.action === 'create' && e.created) parts.push('新增', e.created.name, e.created.level);
+  if (e.action === 'delete') parts.push('删除', e.name);
+  if (d) { const lab = FIELD_LABEL[d.field] || d.label || d.field; parts.push(lab, String(d.from || ''), String(d.to || '')); }
+  if (e.name) parts.push(e.name);
+  return parts.join(' ');
+}
+
+function filtered() {
+  let arr = hist;
+  if (curFilter === 'vvm') arr = arr.filter(e => e.type === 'vvm');
+  if (curFilter === 'goal') arr = arr.filter(e => e.type === 'goal');
+  if (kw) {
+    const s = kw.toLowerCase();
+    arr = arr.filter(e => (e.diffs||[]).some(d => entryText(e, d).toLowerCase().includes(s)) || entryText(e).toLowerCase().includes(s));
+  }
+  return arr;
+}
+
+// —— 对象解析 ——
+function goalById(id) { return goals.find(g => g.id === id); }
+function resolveGoal(e) {
+  if (e.id) { const g = goalById(e.id); if (g) return g; }
+  const byName = goals.find(g => g.name === e.name);
+  if (byName) return byName;
+  return null;
+}
+function pillarName(id) { const m = missions.find(x => x.id === id); return m ? m.title : ''; }
+
+// —— 表格行渲染骨架 ——
+function tblHead() {
+  return `<thead><tr><th style="width:130px">时间</th><th style="width:60px">操作</th><th style="width:100px">变更字段</th><th>最新值</th></tr></thead>`;
+}
+function tblBody(rows) {
+  return rows.map(r => `<tr>
+    <td class="t-time">${fmtTime(r.ts)}</td>
+    <td class="t-act ${r.cls}">${r.label}</td>
+    <td class="t-k">${esc(r.fieldLabel)}</td>
+    <td class="t-to">${escaped(r.to)}</td>
+  </tr>`).join('');
+}
+// 语义图标（与坐标页一致，复用坐标页的 emoji 表示）
+const ICONS = {
+  mission: '🧭',   // 使命：罗盘/方向
+  vision: '🔭',    // 愿景：星/远方
+  values: '⚖️',    // 价值观：盾/准则
+  pillar: '🧱',    // 支柱：柱/支撑
+  goal: '🎯',      // 目标：靶心
+};
+function sigIcon(kind) {
+  return `<span class="sig ${kind}">${ICONS[kind] || ''}</span>`;
+}
+
+// 坐标基础卡片（不折叠，带语义图标）
+function cardSelf(name, kind, rows) {
+  if (!rows.length) return '';
+  return `<div class="obj-fold">
+    <div class="obj-head">${sigIcon(kind)}<span class="fold-name">${esc(name)}</span><span class="fold-meta"><span class="fold-count">${rows.length} 条</span></span></div>
+    <table class="tbl">${tblHead()}<tbody>${tblBody(rows)}</tbody></table>
+  </div>`;
+}
+
+// 可折叠对象卡片（每张表）：kind = mission/vision/values/pillar/goal
+function block(name, path, kind, rows) {
+  if (!rows.length) return '';
+  const nameEl = `<span class="fold-name">${esc(path || name)}</span>`;
+  const pathEl = path && path !== name ? `<span class="fold-path">${esc(path)}</span>` : '';
+  const count = `<span class="fold-count">${rows.length} 条</span>`;
+  const chev = `<span class="fold-chev"></span>`;
+  return `<details class="obj-fold"><summary>
+    ${sigIcon(kind)}
+    ${nameEl}${pathEl}
+    <span class="fold-meta">${count}${chev}</span>
+  </summary><div class="obj-body"><table class="tbl">${tblHead()}<tbody>${tblBody(rows)}</tbody></table></div></details>`;
+}
+
+// —— 模型构建：只保留到「目标O」维度 ——
+// 目标「本身」的变更字段（状态/进度/优先级/期限/时长/挂靠）——不含 note/obstacle/next（那是目标内容/复盘）
+const GOAL_SELF_FIELDS = ['status','progress','priority','deadline','hours','missionId'];
+function buildModel(arr) {
+  const m = { mission: [], vision: [], values: [], pillars: {}, goals: {} };
+  arr.forEach(e => {
+    if (e.type === 'vvm') {
+      (e.diffs||[]).forEach(d => {
+        const row = { ts: e.ts, action: 'update', cls: 'up', label: '⟳ 更新', fieldLabel: FIELD_LABEL[d.field] || d.label || d.field, from: d.from, to: d.to };
+        if (d.field === 'mission') m.mission.push(row);
+        else if (d.field === 'vision') m.vision.push(row);
+        else if (d.field === 'values') m.values.push(row);
+        else if (d.field === 'pillar') { (m.pillars[d.pid || 'x'] = m.pillars[d.pid || 'x'] || []).push(row); }
+      });
+      return;
+    }
+    // goal 类：仅收集「目标O」自身的变更记录（KR / 任务收敛到目标维度，不单独建表）
+    const g = resolveGoal(e);
+    if (!g || g.level !== '目标O') return;
+    const oid = g.id;
+    (m.goals[oid] = m.goals[oid] || { rows: [] });
+    const slot = m.goals[oid];
+    if (e.action === 'create') {
+      slot.rows.push({ ts: e.ts, cls: 'new', label: '＋ 新增', fieldLabel: '创建', from: '', to: e.created ? e.created.name : '' });
+    } else if (e.action === 'delete') {
+      slot.rows.push({ ts: e.ts, cls: 'del', label: '－ 删除', fieldLabel: '删除', from: e.name || '', to: '' });
+    } else {
+      (e.diffs||[]).forEach(d => {
+        if (!GOAL_SELF_FIELDS.includes(d.field)) return; // 只留目标本身的变更
+        slot.rows.push({ ts: e.ts, action: 'update', cls: 'up', label: '⟳ 更新', fieldLabel: FIELD_LABEL[d.field] || d.label || d.field, from: d.from, to: d.to });
+      });
+    }
+  });
+  return m;
+}
+
+// —— 渲染 ——
+function render() {
+  kw = document.getElementById('hSearch').value.trim();
+  renderFilter();
+  const arr = filtered();
+  document.getElementById('hCount').textContent = `共 ${arr.length} 条`;
+  const rootEl = document.getElementById('tlRoot');
+  if (!arr.length) { rootEl.innerHTML = '<div class="empty">还没有历史记录。<br>去「坐标」或「目标拆解」页修改一次，这里就会出现记录。</div>'; return; }
+
+  const model = buildModel(arr);
+  let html = '';
+
+  // 分区1：坐标基础（使命 / 愿景 / 价值观）—— 不折叠，带语义图标
+  const c1 = cardSelf('使命', 'mission', model.mission) + cardSelf('愿景', 'vision', model.vision) + cardSelf('价值观', 'values', model.values);
+  if (c1) html += `<div class="sec"><div class="sec-title">🧭 坐标基础<span class="cnt">使命 / 愿景 / 价值观</span></div>${c1}</div>`;
+
+  // 分区2：愿景支柱 → 每个支柱一个可折叠组合，内含「支柱自身变更表」+「挂靠该支柱的各目标O表」
+  const pillarGs = missions.map(mi => {
+    const ownRows = model.pillars[mi.id] || [];
+    const goalIds = Object.keys(model.goals).filter(oid => { const g = goalById(oid); return g && g.missionId === mi.id; });
+    const goalBlks = goalIds.map(oid => {
+      const g = goalById(oid); const rows = model.goals[oid].rows;
+      if (!rows.length) return '';
+      return block(g.name, '', 'goal', rows);
+    }).join('');
+    if (!ownRows.length && !goalBlks) return '';
+    const nGoal = goalIds.filter(oid => (model.goals[oid] || {}).rows.length).length;
+    const icon = mi.icon || '🧱';
+    return `<details class="pillar-fold" open><summary>
+      <span class="sig pillar">${icon}</span>
+      <span class="p-name">${esc(mi.title)}</span>
+      <span class="fold-meta">
+        ${ownRows.length || nGoal ? `<span class="fold-meta-txt">目标变更 ${nGoal} · 支柱自身 ${ownRows.length}</span>` : ''}
+        <span class="fold-count">${ownRows.length + nGoal} 项</span>
+        <span class="fold-chev"></span>
+      </span>
+    </summary><div class="pillar-body">
+      ${block('本支柱变更', '', 'pillar', ownRows)}
+      ${goalBlks}
+    </div></details>`;
+  }).join('');
+  // 兜底：未匹配到已知支柱的 pillar 记录
+  const unknownP = Object.keys(model.pillars).filter(k => !missions.find(mi => mi.id === k));
+  const unknownBlks = unknownP.map(k => block('愿景支柱（未知）', '', 'pillar', model.pillars[k])).join('');
+  const c2 = pillarGs + unknownBlks;
+  if (c2) html += `<div class="sec"><div class="sec-title">🎯 愿景支柱 · 目标<span class="cnt">每个支柱一个组合 · 其下每个目标O一张表</span></div>${c2}</div>`;
+
+  rootEl.innerHTML = html;
+}
+
+// —— 导出（全量明细，含 KR/任务，便于二次分析） ——
+function exportCsv() {
+  const allRows = [];
+  const arr = filtered();
+  allRows.push(['类型', '对象', '层级', '时间', '操作', '变更字段', '最新值']);
+  const push = (r) => {
+    const g = resolveGoal(r);
+    const level = g ? g.level : '';
+    const obj = (r.type === 'vvm') ? (r.diffs && r.diffs[0].field ? FIELD_LABEL[r.diffs[0].field] : '坐标') : (g ? g.name : (r.name || ''));
+    const fields = (r.type === 'vvm')
+      ? (r.diffs || []).map(d => [obj, '', fmtTime(r.ts), r.action === 'update' ? '⟳ 更新' : r.action, FIELD_LABEL[d.field] || d.field, d.to])
+      : (r.action === 'create' ? [[obj, level, fmtTime(r.ts), '＋ 新增', '创建', r.created ? r.created.name : '']]
+        : r.action === 'delete' ? [[obj, level, fmtTime(r.ts), '－ 删除', '删除', '']]
+        : (r.diffs || []).map(d => [obj, level, fmtTime(r.ts), '⟳ 更新', FIELD_LABEL[d.field] || d.field, d.to]));
+    fields.forEach(f => allRows.push([r.type === 'vvm' ? '坐标' : '目标', ...f]));
+  };
+  arr.forEach(push);
+  if (allRows.length <= 1) { toast('没有可导出的记录'); return; }
+  const lines = allRows.map(row => row.map(v => {
+    let s = String(v ?? '');
+    if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }).join(','));
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '历史记录_' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('已导出 CSV');
+}
+
+window.__appReload = load;
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人目标管理</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<script>window.PAGE_KEY = 'goals';</script>
+
+<div class="layout">
+  <!-- 左侧菜单 -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div class="page-title">
+        <h2>目标管理</h2>
+        <div class="sub">目标 → 关键结果 → 任务 · 展开查看拆解</div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" onclick="openNew('目标O','')">＋ 新目标</button>
+        <button class="btn ghost" onclick="load()">↻</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="s-ico">🔍</span>
+        <input id="searchInput" placeholder="搜索目标…" oninput="setSearch(this.value)">
+      </div>
+      <div class="tabs">
+        <span class="tab active" data-f="全部" onclick="setFilter('全部')">全部</span>
+        <span class="tab" data-f="进行中" onclick="setFilter('进行中')">进行中</span>
+        <span class="tab" data-f="暂停" onclick="setFilter('暂停')">暂停</span>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><i class="sw s0"></i>P0 最重要</span>
+      <span><i class="sw s1"></i>P1 重要</span>
+      <span><i class="sw s2"></i>P2 一般</span>
+      <span class="sort">排序：优先级 → 期限近的在前</span>
+    </div>
+
+    <div class="obj-table-wrap">
+      <div class="obj-table-scroll">
+        <table class="obj-table" id="objTable">
+          <thead>
+            <tr>
+              <th data-sort="priority" onclick="sortBy('priority')">优先级<span class="dir"></span></th>
+              <th data-sort="name" onclick="sortBy('name')">目标<span class="dir"></span></th>
+              <th data-sort="status" onclick="sortBy('status')">状态<span class="dir"></span></th>
+              <th data-sort="progress" onclick="sortBy('progress')">完成度<span class="dir"></span></th>
+              <th data-sort="deadline" onclick="sortBy('deadline')">期限<span class="dir"></span></th>
+              <th data-sort="hours" onclick="sortBy('hours')">本周投入<span class="dir"></span></th>
+            </tr>
+          </thead>
+          <tbody id="objTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="cards" id="tree"></div>
+
+    <div class="archive-wrap" id="archiveWrap">
+      <div class="archive-toggle" onclick="document.getElementById('archiveWrap').classList.toggle('open')">
+        <span class="a-label">🗂 已归档</span>
+        <span class="a-count" id="archiveCount"></span>
+        <span class="a-arrow">▾</span>
+      </div>
+      <div class="archive-body" id="archiveBody"></div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-mask" id="mask">
+  <div class="modal">
+    <h3 id="modalTitle">新增</h3>
+    <div id="modalBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/common.js"></script>
+<script>
+let all = [];
+let vvm = { vision: '', values: [], missions: [] };
+let filter = '全部';
+let search = '';
+let curOpenId = null;
+let sortKey = 'priority';   // 默认按优先级
+let sortDir = 1;            // 1 升序，-1 降序
+const ARCHIVED = ['已完成', '已放弃'];
+
+async function load() {
+  try {
+    [all, vvm] = await Promise.all([loadGoals(), loadVVM()]);
+    // 支持从总览页带 focus 参数跳入并展开
+    const focus = new URLSearchParams(location.search).get('focus');
+    if (focus) {
+      const target = all.find(g => g.id === focus);
+      if (target) {
+        // 若是归档目标（已完成/已放弃），自动展开归档区并展开该卡片
+        if (ARCHIVED.includes(target.status)) {
+          document.getElementById('archiveWrap').classList.add('open');
+          requestAnimationFrame(() => toggleArchived(focus));
+        } else {
+          // 非归档目标：设 curOpenId，跳转过来直接展开
+          curOpenId = focus;
+        }
+      }
+    }
+    render();
+    if (focus) {
+      requestAnimationFrame(() => scrollCenter(focus));
+    }
+  } catch (e) {
+    document.getElementById('tree').innerHTML = '<div class="empty">⚠️ 无法连接后端，请运行 node server.js</div>';
+  }
+}
+
+// 滚动到指定目标并居中
+function scrollCenter(id) {
+  let el = document.getElementById('goal-' + id);
+  if (!el) el = document.getElementById('arch-' + id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 1400);
+  }
+}
+
+function setFilter(f) { filter = f; document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.f === f)); render(); }
+function setSearch(v) { search = v.trim().toLowerCase(); render(); }
+function toggleCard(id) { curOpenId = (curOpenId === id) ? null : id; render(); }
+// 归档卡：展开/收起内部 KR 详情
+function toggleArchived(id) {
+  const el = document.getElementById('arch-' + id);
+  if (!el) return;
+  const open = el.classList.toggle('open');
+  const body = el.querySelector('.arch-body');
+  if (body) body.style.display = open ? 'block' : 'none';
+}
+
+function render() {
+  // 统一排序：表格与下方卡片共用同一排序规则
+  const sorted = sortObjs(getFilteredObjs());
+  renderTable(sorted);
+
+  let html = '';
+  sorted.forEach(o => {
+    const krs = all.filter(g => g.parentId === o.id);
+    html += renderCard(o, krs);
+  });
+  document.getElementById('tree').innerHTML = html || `<div class="empty">${search ? '没有匹配的目标' : '暂无进行中的目标，点右上角「＋新目标」开始 🎯'}</div>`;
+
+  const archived = all.filter(g => g.level === '目标O' && ARCHIVED.includes(g.status));
+  const aFiltered = search ? archived.filter(o => o.name.toLowerCase().includes(search)) : archived;
+  document.getElementById('archiveCount').textContent = `(${aFiltered.length})`;
+  document.getElementById('archiveBody').innerHTML = aFiltered.length ? aFiltered.map(renderArchived).join('') : '<div class="empty" style="padding:30px 0">暂无归档目标</div>';
+}
+
+// 统一的排序比较器
+function sortObjs(list) {
+  const pPrio = { P0: 0, P1: 1, P2: 2, '无': 3 };
+  const pStatus = { '进行中': 0, '暂停': 1, '已完成': 2, '已放弃': 3 };
+  return [...list].sort((a, b) => {
+    let va, vb;
+    if (sortKey === 'progress' || sortKey === 'hours') { va = +a[sortKey] || 0; vb = +b[sortKey] || 0; }
+    else if (sortKey === 'deadline') { va = a.deadline || '9999'; vb = b.deadline || '9999'; }
+    else if (sortKey === 'priority') { va = pPrio[a.priority || '无']; vb = pPrio[b.priority || '无']; }
+    else if (sortKey === 'status') { va = pStatus[a.status]; vb = pStatus[b.status]; }
+    else { va = (a.name || '').toLowerCase(); vb = (b.name || '').toLowerCase(); }
+    if (va < vb) return -1 * sortDir;
+    if (va > vb) return 1 * sortDir;
+    return 0;
+  });
+}
+
+function renderTable(objs) {
+  const sorted = sortObjs(objs);
+  document.getElementById('objTableBody').innerHTML = sorted.length
+    ? sorted.map(o => {
+        const p = +o.progress || 0;
+        const pr = o.priority || '无';
+        const prCls = pr === '无' ? 'None' : pr;
+        const dlt = late(o.deadline);
+        return `<tr data-prio="${pr}" data-id="${o.id}" class="${curOpenId === o.id ? 'active' : ''}" onclick="locateGoal('${o.id}')">
+          <td><span class="ot-prio ${prCls}">${pr === '无' ? '—' : pr}</span></td>
+          <td class="ot-name">${esc(o.name)}</td>
+          <td><span class="pill ${esc(o.status)}">${esc(o.status)}</span></td>
+          <td><div class="ot-prog"><div class="bar"><i style="width:${p}%;background:${p >= 100 ? 'var(--green)' : 'linear-gradient(90deg,var(--blue),var(--teal))'}"></i></div><span class="pct">${p}%</span></div></td>
+          <td class="ot-dl ${dlt ? 'late' : ''}">${o.deadline || '未设'}</td>
+          <td class="ot-hours">${+o.hours || 0}h</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="6"><div class="ot-empty">${search ? '没有匹配的目标' : '暂无进行中的目标，点右上角「＋新目标」开始 🎯'}</div></td></tr>`;
+
+  // 更新排序箭头
+  document.querySelectorAll('#objTable thead th').forEach(th => {
+    const arrow = th.querySelector('.dir');
+    if (arrow) arrow.textContent = th.dataset.sort === sortKey ? (sortDir === 1 ? '▲' : '▼') : '';
+  });
+}
+
+// 点击表头排序：同列切换升降序，新列重置升序
+function sortBy(key) {
+  if (sortKey === key) sortDir = -sortDir;
+  else { sortKey = key; sortDir = 1; }
+  render(); // 卡片与表格同步重排
+}
+
+// 当前过滤后的列表（供排序与定位共用）
+function getFilteredObjs() {
+  const activeObjs = all.filter(g => g.level === '目标O' && !ARCHIVED.includes(g.status));
+  let list = [...activeObjs];
+  if (filter === '进行中') list = list.filter(o => o.status === '进行中');
+  if (filter === '暂停') list = list.filter(o => o.status === '暂停');
+  if (search) list = list.filter(o => o.name.toLowerCase().includes(search));
+  return list;
+}
+
+// 点击表格行：展开对应目标卡片并滚动到它（视窗居中）
+function locateGoal(id) {
+  curOpenId = id;
+  render();
+  requestAnimationFrame(() => {
+    const el = document.getElementById('goal-' + id);
+    if (el) {
+      // block:'center' 让目标卡片在视窗中央
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('flash');
+      setTimeout(() => el.classList.remove('flash'), 1400);
+    }
+  });
+}
+
+function renderCard(o, krs) {
+  const p = +o.progress || 0;
+  const dl = deadlinePill(o.deadline);
+  const open = curOpenId === o.id;
+  const pr = o.priority || '无';
+  const m = (vvm.missions || []).find(x => x.id === o.missionId);
+  const krHtml = krs.map((kr, i) => renderKr(kr, i + 1)).join('');
+  const ringColor = (pr === 'P0' && p < 100) ? 'var(--p0)' : (pr === 'P1' && p < 100) ? 'var(--p1)' : (pr === 'P2' && p < 100) ? 'var(--p2)' : 'var(--blue)';
+  return `<div class="card ${pr} ${open ? 'open' : ''}" id="goal-${o.id}">
+    <div class="card-head" onclick="toggleCard('${o.id}')">
+      <div class="ring">${ring(p, p >= 100 ? 'var(--green)' : ringColor, p + '%')}</div>
+      <div class="card-mid">
+        <div class="card-name">
+          ${esc(o.name)}
+          ${pr !== '无' ? `<span class="pr-badge ${pr}">${pr}</span>` : ''}
+        </div>
+        <div class="card-tags">
+          <span class="pill ${esc(o.status)}">${esc(o.status)}</span>
+          <span class="pill deadline ${late(o.deadline) ? 'late' : ''}">🗓 ${dl}</span>
+          <span class="pill muted">⏱ ${+o.hours || 0}h</span>
+          ${m ? `<span class="pill mission">${m.icon || '🧭'} ${esc(m.title)}</span>` : ''}
+        </div>
+      </div>
+      <div class="chev">▾</div>
+    </div>
+    <div class="card-body">
+      <div class="kr-actions">
+        <button class="btn primary sm" onclick="openNew('关键结果KR','${o.id}')">＋ 关键结果</button>
+        <button class="btn ghost sm" onclick="editItem('${o.id}', all)">✎ 编辑目标</button>
+      </div>
+      ${krs.length ? `<div class="krs">${krHtml}</div>` : '<div class="kr-empty">还没有关键结果，点「＋ 关键结果」拆解 🎯</div>'}
+    </div>
+  </div>`;
+}
+
+function renderKr(kr, idx) {
+  const tasks = all.filter(g => g.parentId === kr.id);
+  const taskHtml = tasks.map(t => renderTask(t)).join('');
+  const p = +kr.progress || 0;
+  return `<div class="kr">
+    <div class="kr-head">
+      <div class="kr-name">${esc(kr.name)} <span class="pill ${esc(kr.status)}">${esc(kr.status)}</span></div>
+      <div class="kr-btns">
+        <button class="btn primary sm" onclick="openNew('任务','${kr.id}')">＋</button>
+        <button class="icon-btn" onclick="editItem('${kr.id}', all)">✎</button>
+        <button class="icon-btn" onclick="delItem('${kr.id}', all)">🗑</button>
+      </div>
+    </div>
+    <div class="kr-prog">
+      <div class="bar"><i style="width:${p}%"></i></div>
+      <span class="pct">${p}%</span>
+    </div>
+    ${taskHtml ? `<div class="tasks">${taskHtml}</div>` : '<div style="font-size:12px;color:var(--muted);padding:4px 2px">暂无任务</div>'}
+  </div>`;
+}
+
+function renderTask(t) {
+  const done = t.status === '已完成';
+  const p = +t.progress || 0;
+  return `<div class="task ${done ? 'done' : ''}">
+    <div class="dot" onclick="toggleTask('${t.id}')">${done ? '✓' : ''}</div>
+    <div class="task-name">${esc(t.name)}</div>
+    <div class="t-progress"><div class="f" style="width:${p}%"></div></div>
+    <div class="t-deadline ${late(t.deadline) ? 'late' : ''}">${t.deadline || '—'}</div>
+    <div class="t-actions">
+      <button class="icon-btn" onclick="editItem('${t.id}', all)">✎</button>
+      <button class="icon-btn" onclick="delItem('${t.id}', all)">🗑</button>
+    </div>
+  </div>`;
+}
+
+function renderArchived(o) {
+  const p = +o.progress || 0;
+  const krs = all.filter(g => g.parentId === o.id);
+  const krHtml = krs.map((kr, i) => renderKr(kr, i + 1)).join('');
+  return `<div class="archived-card" id="arch-${o.id}">
+    <div class="arch-head" onclick="toggleArchived('${o.id}')">
+      <div class="a-dot">${p}%</div>
+      <div class="a-name">${esc(o.name)}</div>
+      <div class="a-tags">
+        <span class="pill ${esc(o.status)}">${esc(o.status)}</span>
+        <span class="pill muted">${o.deadline || '—'}</span>
+        <span class="pill muted">KR ${krs.length}</span>
+      </div>
+      <div class="a-actions" onclick="event.stopPropagation()">
+        <button class="icon-btn" onclick="editItem('${o.id}', all)">✎</button>
+        <button class="icon-btn" onclick="delItem('${o.id}', all)">🗑</button>
+      </div>
+      <div class="a-chev">▾</div>
+    </div>
+    <div class="arch-body">${krs.length ? `<div class="krs">${krHtml}</div>` : '<div class="kr-empty">该目标没有拆解关键结果</div>'}</div>
+  </div>`;
+}
+
+async function toggleTask(id) {
+  const g = all.find(x => x.id === id); if (!g) return;
+  const done = g.status !== '已完成';
+  await fetch(API + '/goals/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: done ? '已完成' : '进行中', progress: done ? 100 : (g.progress || 0) }) });
+  load();
+}
+window.__appReload = load;
+load();
+</script>
+</body>
+</html>

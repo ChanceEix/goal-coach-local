@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人目标管理</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<script>window.PAGE_KEY = 'review';</script>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div class="page-title">
+        <h2>复盘</h2>
+        <div class="sub">GRAI 结论式复盘 · 不只记录，而是发现问题、给出结论</div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" onclick="quickEditFirst()">✍️ 填写复盘</button>
+        <button class="btn ghost" onclick="load()">↻</button>
+      </div>
+    </div>
+
+    <div class="review-intro">
+      <h3>📐 复盘，用 GRAI 四步看清问题</h3>
+      <p>不是流水账，而是对照「当初目标 vs 实际进度」，自动算出差距、给出结论。每张复盘卡按四步展开：</p>
+      <div class="grai-steps">
+        <span class="step"><i>G</i> 目标 —— 当初想达成什么</span>
+        <span class="step"><i>R</i> 结果 —— 实际走到哪了（自动算差距）</span>
+        <span class="step"><i>A</i> 分析 —— 为什么出现这个差距</span>
+        <span class="step"><i>I</i> 洞察 —— 下一步具体怎么做</span>
+      </div>
+      <p style="margin-top:12px;font-size:12px;color:var(--muted)">⚡ 点任意内容可直接修改；系统自动对比「实际进度 vs 时间预期」，帮你发现落后、给出结论。</p>
+    </div>
+
+    <div class="toolbar">
+      <div class="tabs">
+        <span class="tab active" data-f="全部" onclick="setFilter('全部')">全部</span>
+        <span class="tab" data-f="有内容" onclick="setFilter('有内容')">有复盘内容</span>
+        <span class="tab" data-f="P0" onclick="setFilter('P0')">P0 优先</span>
+      </div>
+    </div>
+
+    <div class="review-grid" id="tree"></div>
+  </main>
+</div>
+
+<div class="modal-mask" id="mask">
+  <div class="modal">
+    <h3 id="modalTitle">新增</h3>
+    <div id="modalBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/common.js"></script>
+<script>
+let all = [];
+let vvm = { vision: '', values: [], missions: [] };
+let filter = '全部';
+
+function todayISO() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+
+async function load() {
+  try {
+    [all, vvm] = await Promise.all([loadGoals(), loadVVM()]);
+    render();
+  } catch (e) {
+    document.getElementById('tree').innerHTML = '<div class="empty">⚠️ 无法连接后端，请运行 node server.js</div>';
+  }
+}
+
+function setFilter(f) { filter = f; document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.f === f)); render(); }
+
+// 进度应到值：已用时长占总时长的百分比（Tire-strap 时间进度）
+function timeRatio(o) {
+  if (!o.deadline) return null;
+  const start = new Date('2026-01-01'); // 简化：以年初为起点
+  const end = new Date(o.deadline + 'T23:59:59');
+  const now = new Date();
+  if (now >= end) return null;
+  return Math.min(Math.max((now - start) / (end - start), 0), 1);
+}
+// 预期进度
+function expectProg(o) {
+  const r = timeRatio(o);
+  return r == null ? null : Math.round(r * 100);
+}
+// 偏差 = 实际 - 预期
+function deviation(o) { const e = expectProg(o); return e == null ? null : ((+o.progress || 0) - e); }
+
+/* GRAI 结论式复盘：自动发现问题 + 导出洞察结论 */
+function render() {
+  const objs = all.filter(g => g.level === '目标O' && !['已完成', '已放弃'].includes(g.status))
+                  .sort((a, b) => objRank(a) - objRank(b));
+
+  let filtered = objs;
+  if (filter === '有内容') filtered = filtered.filter(o => o.note || o.obstacle || o.next);
+  if (filter === 'P0') filtered = filtered.filter(o => o.priority === 'P0');
+
+  // 顶部概览：本次复盘宏观结论
+  const alerts = filtered.map(o => ({ o, dev: deviation(o) })).filter(x => x.dev != null && x.dev < -10);
+  document.getElementById('tree').innerHTML = filtered.length
+    ? renderSummary(alerts) + filtered.map(o => renderGRAI(o)).join('')
+    : '<div class="empty review-empty">暂无复盘目标，切换到「目标管理」新增后回来查看 🌱</div>';
+}
+
+// 宏观概览条：哪些目标严重落后
+function renderSummary(alerts) {
+  if (!alerts.length) return '';
+  return `<div class="review-summary">
+    <div class="rs-title">🚨 本次发现问题</div>
+    <div class="rs-body">${alerts.slice(0, 6).map(a => `<div class="rs-item"><span class="f-dot warn">!</span><span class="fs-txt">${esc(a.o.name)} · 进度落后 <b>${Math.abs(a.dev)}%</b>，需重点关注</span></div>`).join('')}</div>
+  </div>`;
+}
+
+/* 每个目标的 GRAI 四步卡片 */
+function renderGRAI(o) {
+  const p = +o.progress || 0;
+  const expect = expectProg(o);
+  const dev = deviation(o);
+  const pr = o.priority || '无';
+  const m = (vvm.missions || []).find(x => x.id === o.missionId);
+  const tooLate = o.deadline ? late(o.deadline) : false;
+
+  // G —— 目标：当初想达成什么
+  // R —— 结果：实际到哪了（自动算差距）
+  // A —— 分析：为什么差距（用 obstacle/耗时）
+  // I —— 洞察结论：下一步（用 next）+ 自动建议
+  const insights = buildInsights(o, p, expect, dev, tooLate);
+
+  return `<div class="review-card ${pr}" id="review-${o.id}">
+    <div class="review-head">
+      <div class="num">${p}%</div>
+      <div class="r-title">
+        ${esc(o.name)}
+        <div class="gr-meta">
+          <span class="pill ${esc(o.status)}">${esc(o.status)}</span>
+          ${pr !== '无' ? `<span class="pr-badge ${pr}">${pr}</span>` : ''}
+          ${m ? `<span class="pill mission">${m.icon || '🧭'} ${esc(m.title)}</span>` : ''}
+          ${o.deadline ? `<span class="pill deadline ${tooLate ? 'late' : ''}">🗓 ${o.deadline}</span>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="grai-metaline">
+      <div class="grai-meta">
+        ${expect != null ? `<span>预期进度 <b style="color:${expect <= p ? 'var(--green)' : 'var(--red)'}">${expect}%</b></span>` : ''}
+        ${dev != null ? `<span>偏差 <b style="color:${dev >= 0 ? 'var(--green)' : 'var(--red)'}">${dev > 0 ? '+' : ''}${dev}%</b></span>` : ''}
+        <span>KR ${all.filter(g => g.parentId === o.id && g.status === '已完成').length}/${all.filter(g => g.parentId === o.id).length} 完成</span>
+        <span>⏱ ${+o.hours || 0}h 投入</span>
+        ${!o.deadline ? '<span>未设期限</span>' : ''}
+      </div>
+    </div>
+
+    ${graiText('G', '目标 · 当初想达成什么', (o.note && o.note.trim()) ? o.note : '（还没写进度记录）', o.id, 'note')}
+    ${graiText('R', '结果 · 实际走到哪', o.progressText || (p + '%'), o.id, 'progressText')}
+
+    ${detailBlock(o, p)}
+
+    ${graiText('A', '分析 · 为什么出现差距', o.obstacle, o.id, 'obstacle')}
+    ${graiText('I', '洞察 · 下一步怎么改进', o.next, o.id, 'next')}
+
+    ${insights}
+  </div>`;
+}
+
+function toggleDetail(head) {
+  const block = head.closest('.detail-block');
+  block.classList.toggle('collapsed');
+}
+
+function graiText(letter, label, text, id, field) {
+  const has = text && text.trim();
+  const dotCls = { G: 'g', R: 'r', A: 'a', I: 'i' }[letter];
+  return `<div class="grai-step">
+    <div class="gs-n ${dotCls}">${letter}</div>
+    <div class="gs-body">
+      <div class="gs-title">${label}</div>
+      <div class="gs-text ${has ? '' : 'empty'}" onclick="quickEdit('${id}','${field}')">${has ? esc(text) : '（点此填写）'}</div>
+    </div>
+  </div>`;
+}
+
+/* 目标没达成时，具体落后在哪个 KR / 任务？—— 定位明细区块 */
+function detailBlock(o, p) {
+  // 该目标下的 KR 与任务
+  const krs = all.filter(g => g.parentId === o.id);
+  const tasksOf = kId => all.filter(g => g.parentId === kId);
+  // 未完成的 KR（进行中/暂停，且进度<100）
+  const pendingKr = krs.filter(k => !['已完成'].includes(k.status) && (+k.progress || 0) < 100);
+  // 各未完成 KR 下的未完成任务
+  const pendingTasks = [];
+  pendingKr.forEach(k => {
+    tasksOf(k.id).filter(t => !['已完成'].includes(t.status)).forEach(t => pendingTasks.push({ k, t }));
+  });
+
+  // 若 KR 和任务都已达成，不需要明细
+  if (!pendingKr.length && !pendingTasks.length) return '';
+
+  // KR 进度徽章配色
+  const krCls = k => (+k.progress || 0) >= 70 ? 'ok' : ((+k.progress || 0) >= 30 ? 'mid' : 'low');
+  const bar = v => `<div class="dg-bar"><span style="width:${Math.min(Math.max(v, 0), 100)}%"></span></div>`;
+
+  const krRows = pendingKr.length ? pendingKr.map(k => `
+    <tr class="${krCls(k)}">
+      <td class="dg-kr">
+        <span class="dg-dot ${krCls(k)}"></span>
+        <span class="dg-name">${esc(k.name)}</span>
+        ${k.deadline && late(k.deadline) ? '<span class="dg-late-icon">⚠️</span>' : ''}
+      </td>
+      <td class="dg-prog">${bar(+k.progress || 0)}<em>${+k.progress || 0}%</em></td>
+      <td class="dg-status">${esc(k.status)}</td>
+      <td class="dg-dead">${k.deadline ? esc(k.deadline) : '—'}</td>
+    </tr>`).join('') : '<tr class="dg-none"><td colspan="4">✔ 所有 KR 均已达成</td></tr>';
+
+  const taskRows = pendingTasks.length ? pendingTasks.map(({ k, t }) => `
+    <tr>
+      <td class="dg-kr"><span class="dg-sub">↳</span><span class="dg-name">${esc(t.name)}</span>${t.deadline && late(t.deadline) ? '<span class="dg-late-icon">⚠️</span>' : ''}</td>
+      <td class="dg-prog">${bar(+t.progress || 0)}<em>${+t.progress || 0}%</em></td>
+      <td class="dg-status">${esc(t.status)}</td>
+      <td class="dg-dead">${t.deadline ? esc(t.deadline) : '—'}</td>
+    </tr>`).join('') : '<tr class="dg-none"><td colspan="4">✔ 暂无未完成任务</td></tr>';
+
+  return `<div class="detail-block collapsed" id="detail-${o.id}">
+    <div class="db-head" onclick="toggleDetail(this)">
+      <span class="db-sub">📍 落后在哪个环节</span>
+      <span class="db-count">${pendingKr.length} 个 KR 未完成 · ${pendingTasks.length} 个任务未完成</span>
+      <span class="db-arrow">▾</span>
+    </div>
+    <div class="db-body">
+      <div class="db-group">
+        <div class="dbg-title"><span class="dbg-ico">🎯</span> 未完成的关键结果</div>
+        <table class="dg-table">
+          <thead><tr><th>关键结果</th><th>进度</th><th>状态</th><th>截止</th></tr></thead>
+          <tbody>${krRows}</tbody>
+        </table>
+      </div>
+      <div class="db-group">
+        <div class="dbg-title"><span class="dbg-ico">🧩</span> 未完成的任务</div>
+        <table class="dg-table">
+          <thead><tr><th>任务</th><th>进度</th><th>状态</th><th>截止</th></tr></thead>
+          <tbody>${taskRows}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildInsights(o, p, expect, dev, tooLate) {
+  const notes = [];
+  if (tooLate) notes.push({ type: 'warn', t: '期限已过', b: `目标「${esc(o.name)}」已超期，但进度才 ${p}%。需要二选一：要么集中火力赶进度，要么果断调整期限/范围。` });
+  else if (expect != null && dev < -15) notes.push({ type: 'warn', t: '进度明显落后', b: `目前进度 ${p}%，但按时间应该到 ${expect}%。落后了 <b style="color:var(--red)">${Math.abs(dev)}%</b>。多是「<b>投入不足</b>」而非「目标太难」——建议下周把投入提上去，或砍掉无关事项。` });
+  else if (expect != null && dev < -5) notes.push({ type: 'info', t: '轻微滞后', b: `进度 ${p}% 略落后预期 ${expect}%（差 ${Math.abs(dev)}%）。问题不大，但别让它滑下去。` });
+
+  if (p >= 100 && o.status === '已完成') notes.push({ type: 'good', t: '目标达成', b: `已达成 100%。回顾一下：什么做对了？把可复用的方法记下来。` });
+  else if (expect != null && dev >= 0) notes.push({ type: 'good', t: '进度良好', b: `进度 ${p}% 赶上了/超过了预期（${expect}%）。保持这个节奏即可。` });
+
+  if (notes.length) {
+    // 合并成一条「结论」洞察卡，优先危机类
+    const priority = { warn: 0, info: 1, good: 2 };
+    notes.sort((a, b) => priority[a.type] - priority[b.type]);
+    const first = notes[0];
+    const extra = notes.slice(1).map(n => `<div class="finding-row"><span class="f-dot ${n.type}">${n.type === 'good' ? '✓' : '!'}</span>${n.b}</div>`).join('');
+    return `<div class="insight ${first.type}">
+      <div class="i-title">${first.type === 'warn' ? '⚠️ 发现问题' : (first.type === 'good' ? '✅ 做得好' : '💡 关注点')} · 结论</div>
+      <div class="i-body">${first.b}</div>
+      ${extra}
+    </div>`;
+  }
+  return '';
+}
+
+/* ---------- 内联快速编辑（改为中文 field key，与 saveField 对齐） ---------- */
+const FIELD_KEY = { 'progressText': 'note', 'obstacle': 'obstacle', 'next': 'next' };
+function quickEdit(id, key) {
+  const g = all.find(x => x.id === id);
+  if (!g) return;
+  const realKey = FIELD_KEY[key] || 'note';
+  const labels = { note: '进度记录', obstacle: '当前障碍', next: '下一步行动' };
+  const cur = g[realKey] || '';
+  editId = id; editParent = g.parentId; editLevel = g.level;
+  document.getElementById('modalTitle').textContent = labels[realKey];
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field"><label>内容</label><textarea id="f_note">${esc(cur)}</textarea></div>
+    <div class="modal-foot"><button class="btn ghost" onclick="closeModal()">取消</button><button class="btn primary" onclick="saveField('${id}','${realKey}')">💾 保存</button></div>`;
+  document.getElementById('mask').classList.add('show');
+  window.__modalOpen = true;
+}
+
+function quickEditFirst() {
+  const objs = all.filter(g => g.level === '目标O' && !['已完成', '已放弃'].includes(g.status))
+                  .sort((a, b) => objRank(a) - objRank(b));
+  const target = objs.find(o => o.priority === 'P0' && !o.note) || objs.find(o => !o.note) || objs[0];
+  if (!target) { toast('暂无待复盘的目标'); return; }
+  quickEdit(target.id, 'note');
+}
+
+async function saveField(id, field) {
+  const val = document.getElementById('f_note').value;
+  await fetch(API + '/goals/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: val }) });
+  closeModal();
+  await load();
+  toast('已保存 ✓');
+}
+
+window.__appReload = load;
+load();
+</script>
+</body>
+</html>

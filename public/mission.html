@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人目标管理</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<script>window.PAGE_KEY = 'mission';</script>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div class="page-title">
+        <h2>使命 · 愿景 · 价值观</h2>
+        <div class="sub">这是目标的「根」——先想清为什么出发、去向何方，再决定今天做什么</div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" onclick="load()">↻</button>
+      </div>
+    </div>
+
+    <div class="coord-hero">
+      <div class="ch-eyebrow"><span class="ch-ico">🧭</span> 坐标 · 先找到自己的位置</div>
+      <h2>先定坐标，<em>再谈目标</em></h2>
+      <p>使命是根、愿景是远方、价值观是路上的规矩、目标是沿途的里程碑——四层坐标撑起你做的每一件事。</p>
+      <div class="ch-nav">
+        <a href="#card-vv"><b>01</b>🧭 使命</a>
+        <a href="#card-ms"><b>02</b>🔭 愿景</a>
+        <a href="#card-vl"><b>03</b>⚖️ 价值观</a>
+        <a href="#card-map"><b>04</b>🎯 目标</a>
+      </div>
+    </div>
+
+    <div class="coord-flow" id="vvmGrid">
+      <section class="cardx x-vv" id="card-vv">
+        <header class="cx-head">
+          <span class="cx-ico">🧭</span>
+          <div class="cx-t"><h3>使命 · <em class="cx-en">Mission</em></h3><span class="cx-sub">我为什么而存在</span></div>
+          <div class="cx-hint">回答「为什么出发」：一句长期不变的话，写清你存在的根本理由。</div>
+        </header>
+        <div class="cx-body" id="body-vv"></div>
+      </section>
+
+      <section class="cardx x-ms" id="card-ms">
+        <header class="cx-head">
+          <span class="cx-ico">🔭</span>
+          <div class="cx-t"><h3>愿景 · <em class="cx-en">Vision</em></h3><span class="cx-sub">我未来要成为什么样</span></div>
+          <div class="cx-hint">回答「要去哪里」：把使命落成几条长期支柱，目标正是从这些支柱拆解而来。</div>
+        </header>
+        <div class="cx-body" id="body-ms"></div>
+      </section>
+
+      <section class="cardx x-vl" id="card-vl">
+        <header class="cx-head">
+          <span class="cx-ico">⚖️</span>
+          <div class="cx-t"><h3>价值观 · <em class="cx-en">Values</em></h3><span class="cx-sub">我怎么做事的底线</span></div>
+          <div class="cx-hint">回答「怎么走」：方向冲突时，回到这儿做判断——哪件事更符合你长期坚持的原则。</div>
+        </header>
+        <div class="cx-body" id="body-vl"></div>
+      </section>
+
+      <section class="cardx x-map" id="card-map">
+        <header class="cx-head">
+          <span class="cx-ico">🎯</span>
+          <div class="cx-t"><h3>目标 · <em class="cx-en">Goals</em></h3><span class="cx-sub">承接愿景的里程碑</span></div>
+          <div class="cx-hint">「进行中 / 暂停」的目标统一挂靠到愿景支柱上。选一条支柱，就把这份努力接入你的坐标。</div>
+        </header>
+        <div class="cx-body" id="body-map"></div>
+      </section>
+    </div>
+
+    <div class="rel-section">
+      <div class="rel-head">
+        <div class="rel-eyebrow">🧭 THE BIG PICTURE · 一张图看懂</div>
+        <h3>从使命到目标，是一条从虚到实的链</h3>
+        <p>一句话：<b>使命是根，愿景是远方，价值观是路上的规矩，目标是沿途的里程碑。</b>使命回答「为什么出发」，愿景描绘「要到哪里去」，价值观圈定「哪些事不能做」，目标把这些变成可衡量、可兑现的一步步。</p>
+      </div>
+      <div class="rel-map">
+        <div class="rel-flow">
+          <div class="rel-node n1">
+            <div class="rn-num">01</div>
+            <div class="rn-ico">🧭</div>
+            <div class="rn-lab">使命</div>
+            <div class="rn-desc">为什么出发<br>长期的初心与本意</div>
+          </div>
+          <div class="rel-arrow">→</div>
+          <div class="rel-node n2">
+            <div class="rn-num">02</div>
+            <div class="rn-ico">🔭</div>
+            <div class="rn-lab">愿景</div>
+            <div class="rn-desc">未来要成为什么样<br>几条长期支柱</div>
+          </div>
+          <div class="rel-arrow">→</div>
+          <div class="rel-node n3">
+            <div class="rn-num">03</div>
+            <div class="rn-ico">⚖️</div>
+            <div class="rn-lab">价值观</div>
+            <div class="rn-desc">做事的原则、底线<br>方向冲突时靠它选</div>
+          </div>
+          <div class="rel-arrow">→</div>
+          <div class="rel-node n4">
+            <div class="rn-num">04</div>
+            <div class="rn-ico">🎯</div>
+            <div class="rn-lab">目标 O</div>
+            <div class="rn-desc">追求愿景的里程碑<br>归属到某条支柱</div>
+          </div>
+          <div class="rel-arrow">→</div>
+          <div class="rel-node n5">
+            <div class="rn-num">05</div>
+            <div class="rn-ico">🧩</div>
+            <div class="rn-lab">KR · 任务</div>
+            <div class="rn-desc">拆解成可执行的一步步<br>落到每天的行动</div>
+          </div>
+        </div>
+        <div class="rel-note">
+          <div class="rn-card">
+            <b>🔄 它们如何协作</b>
+            <p>使命回答「为什么出发」（why）；愿景把它落到「未来要成为什么样」（which）；价值观圈定「哪些事绝不能做」（how to choose）；目标与 KR/任务负责「每天做什么」（what to do）。四层由虚到实，逐层落地。</p>
+          </div>
+          <div class="rn-card">
+            <b>⚖️ 方向冲突时的抉择顺序</b>
+            <p>两个目标打架、一时难取舍时，先回到价值观：哪件事更符合你长期坚持的原则？再看愿景：哪件离你最想成为的样子更近？最后回望使命：哪件真正贴近你存在的理由？越往上越稳。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-mask" id="mask">
+  <div class="modal">
+    <h3 id="modalTitle">编辑</h3>
+    <div id="modalBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/common.js"></script>
+<script>
+let all = [];
+let vvm = { mission: '', vision: '', values: [], missions: [] };
+let editing = {};   // { vision: bool, value:<id>, pillar:<id> } 记录当前处于编辑态的对象
+// 愿景支柱可选图标集（每个支柱可配一个，展示处跟随）
+const PILLAR_ICONS = ['🧱','💪','🏃','🎨','📚','🌱','🏆','💡','🧠','🚀','🛠','⚡','🧭','📈','🎯'];
+
+async function load() {
+  try {
+    [all, vvm] = await Promise.all([loadGoals(), loadVVM()]);
+    editing = {};
+    render();
+  } catch (e) {
+    document.getElementById('vvmGrid').innerHTML = '<div class="empty">⚠️ 无法连接后端，请运行 node server.js</div>';
+  }
+}
+
+function render() {
+  document.getElementById('body-vv').innerHTML = renderMissionBody();
+  document.getElementById('body-vl').innerHTML = renderValuesBody();
+  document.getElementById('body-ms').innerHTML = renderVisionBody();
+  document.getElementById('body-map').innerHTML = renderMapping();
+}
+
+/* ---------- 使命 · 为什么存在（内联编辑） ---------- */
+function renderMissionBody() {
+  if (editing.vision) {
+    return `<div class="inline-edit">
+      <textarea id="iv_mission">${esc(vvm.mission || '')}</textarea>
+      <div class="iv-foot">
+        <button class="vm-btn cancel" onclick="cancelVision()">取消</button>
+        <button class="vm-btn save" onclick="saveVision()">✓ 保存</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="iv-head">
+      <span class="iv-title">我的使命 · 为什么存在</span>
+      <button class="vm-btn edit icon" onclick="startVisionEdit()" title="修改">✎</button>
+    </div>
+    <div class="inline-view ${vvm.mission ? '' : 'empty'}" style="min-height:56px">${vvm.mission ? esc(vvm.mission) : '（空）点「✎」写下你的使命'}</div>`;
+}
+function startVisionEdit() { editing.vision = true; render(); }
+function cancelVision() { editing.vision = false; render(); }
+async function saveVision() {
+  vvm.mission = document.getElementById('iv_mission').value.trim();
+  await saveVVM();
+  editing.vision = false;
+  render();
+  toast('使命已保存 ✓');
+}
+
+/* ---------- 价值观（内联编辑状态切换） ---------- */
+function renderValuesBody() {
+  const values = vvm.values || [];
+  if (!values.length) {
+    return `<div class="inline-view empty" style="min-height:96px">还没有价值观，点下方「＋ 添加」开始</div>
+      <div class="add-mini-row"><button class="vm-btn add" onclick="addValue()">＋ 添加价值观</button></div>`;
+  }
+  const list = values.map((v, i) => {
+    if (editing.value === v.id) {
+      return `<div class="val-item">
+        <div class="val-top">
+          <div class="v-dot">${i + 1}</div>
+          <div class="inline-edit" style="flex:1">
+            <input id="iv_value_${v.id}" value="${esc(v.text || '')}" placeholder="写下这条价值原则">
+            <div class="iv-foot">
+              <button class="vm-btn cancel sm" onclick="cancelValue('${v.id}')">取消</button>
+              <button class="vm-btn save sm" onclick="saveValue('${v.id}')">✓ 保存</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+    return `<div class="val-item">
+      <div class="val-top">
+        <div class="v-dot">${i + 1}</div>
+        <div class="v-text ${v.text ? '' : 'empty'}">${v.text ? esc(v.text) : '（空）点修改填写'}</div>
+        <div class="val-actions">
+          <button class="icon-btn" onclick="startValueEdit('${v.id}')" title="修改">✎</button>
+          <button class="icon-btn" onclick="delValue('${v.id}')" title="删除">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="val-list">${list}</div>
+    <div class="add-mini-row"><button class="vm-btn add" onclick="addValue()">＋ 添加价值观</button></div>`;
+}
+function addValue() {
+  vvm.values = vvm.values.concat([{ id: 'v_' + Date.now().toString(36), text: '' }]);
+  const newId = vvm.values[vvm.values.length - 1].id;
+  saveVVM().then(() => { editing.value = newId; render(); });
+}
+function startValueEdit(id) { editing.value = id; render(); }
+function cancelValue(id) { editing.value = null; render(); }
+async function saveValue(id) {
+  const val = document.getElementById('iv_value_' + id).value.trim();
+  const v = vvm.values.find(x => x.id === id);
+  if (v) v.text = val;
+  await saveVVM();
+  editing.value = null;
+  render();
+  toast('价值观已保存 ✓');
+}
+async function delValue(id) {
+  if (!confirm('删除这条价值观？')) return;
+  vvm.values = vvm.values.filter(x => x.id !== id);
+  await saveVVM();
+  render();
+}
+
+/* ---------- 愿景 · 未来成为什么样 + 支柱（内联编辑） ---------- */
+function renderVisionBody() {
+  // 上半：愿景画面（一句话）
+  let visionHtml;
+  if (editing.visionText) {
+    visionHtml = `<div class="inline-edit">
+      <textarea id="iv_vision">${esc(vvm.vision || '')}</textarea>
+      <div class="iv-foot">
+        <button class="vm-btn cancel sm" onclick="cancelVisionText()">取消</button>
+        <button class="vm-btn save sm" onclick="saveVisionText()">✓ 保存</button>
+      </div>
+    </div>`;
+  } else {
+    visionHtml = `<div class="iv-head">
+      <span class="iv-title">愿景 · 未来成为什么样</span>
+      <button class="vm-btn edit icon" onclick="startVisionTextEdit()" title="修改">✎</button>
+    </div>
+    <div class="inline-view ${vvm.vision ? '' : 'empty'}" style="min-height:56px">${vvm.vision ? esc(vvm.vision) : '（空）点「✎」写下你的愿景'}</div>`;
+  }
+
+  // 下半：愿景支柱（目标挂靠到这里）
+  const missions = vvm.missions || [];
+  let pillarsHtml;
+  if (!missions.length) {
+    pillarsHtml = `<div class="inline-view empty" style="min-height:72px">还没有愿景支柱，点下方「＋ 添加」开始</div>
+      <div class="add-mini-row"><button class="vm-btn add" onclick="addMission()">＋ 添加愿景支柱</button></div>`;
+  } else {
+    const list = missions.map(m => {
+      const count = all.filter(g => g.missionId === m.id).length;
+      const icon = m.icon || '🧱';
+      if (editing.mission === m.id) {
+        return `<div class="mission-item">
+          <div class="m-top">
+            <div class="m-ico">${icon}</div>
+            <div class="m-body">
+              <div class="inline-edit">
+                <input id="iv_mtitle_${m.id}" value="${esc(m.title || '')}" placeholder="支柱名，如 增长能力">
+                <textarea id="iv_mdesc_${m.id}" style="margin-top:8px;min-height:74px" placeholder="用一句话描述这条支柱">${esc(m.desc || '')}</textarea>
+                <div class="iv-foot">
+                  <span style="font-size:11.5px;color:var(--muted);margin-right:auto;display:inline-flex;align-items:center;gap:6px">图标：
+                    ${PILLAR_ICONS.map(i => `<button type="button" class="picon ${i === icon ? 'on' : ''}" data-ic="${i}" onclick="pickPillarIcon('${m.id}','${i}',this)">${i}</button>`).join('')}
+                  </span>
+                  <button class="vm-btn cancel sm" onclick="cancelMission('${m.id}')">取消</button>
+                  <button class="vm-btn save sm" onclick="saveMission('${m.id}')">✓ 保存</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }
+      return `<div class="mission-item">
+        <div class="m-top">
+          <div class="m-ico">${icon}</div>
+          <div class="m-body">
+            <div class="m-title">${esc(m.title)}</div>
+            <div class="m-desc">${m.desc ? esc(m.desc) : '（暂无描述）'}</div>
+          </div>
+          <div class="m-actions">
+            <span class="m-count">${count} 个目标挂靠于此</span>
+            <button class="icon-btn" onclick="startMissionEdit('${m.id}')" title="修改">✎</button>
+            <button class="icon-btn" onclick="delMission('${m.id}')" title="删除">🗑</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    pillarsHtml = `<div class="mission-list">${list}</div>
+      <div class="add-mini-row"><button class="vm-btn add" onclick="addMission()">＋ 添加愿景支柱</button></div>`;
+  }
+
+  return `<div class="vision-view">${visionHtml}<div class="pillars-wrap"><div class="pillars-title">🎯 愿景支柱 · 目标挂靠到这些方向</div>${pillarsHtml}</div></div>`;
+}
+function startVisionTextEdit() { editing.visionText = true; render(); }
+function cancelVisionText() { editing.visionText = false; render(); }
+async function saveVisionText() {
+  vvm.vision = document.getElementById('iv_vision').value.trim();
+  await saveVVM();
+  editing.visionText = false;
+  render();
+  toast('愿景已保存 ✓');
+}
+function addMission() {
+  vvm.missions = vvm.missions.concat([{ id: 'm_' + Date.now().toString(36), title: '', desc: '', icon: '🧱' }]);
+  const newId = vvm.missions[vvm.missions.length - 1].id;
+  saveVVM().then(() => { editing.mission = newId; render(); });
+}
+function startMissionEdit(id) { editing.mission = id; render(); }
+function cancelMission(id) { editing.mission = null; render(); }
+// 选择支柱图标：把选中图标临时存到 vvm.missions 对应条目的 icon
+function pickPillarIcon(id, icon, btn) {
+  const m = vvm.missions.find(x => x.id === id);
+  if (m) m.icon = icon;
+  const wrap = btn.parentElement;
+  if (wrap) wrap.querySelectorAll('.picon').forEach(b => b.classList.toggle('on', b === btn));
+}
+async function saveMission(id) {
+  const m = vvm.missions.find(x => x.id === id);
+  if (m) { m.title = document.getElementById('iv_mtitle_' + id).value.trim(); m.desc = document.getElementById('iv_mdesc_' + id).value.trim(); }
+  await saveVVM();
+  editing.mission = null;
+  render();
+  toast('愿景支柱已保存 ✓');
+}
+async function delMission(id) {
+  if (!confirm('删除这条愿景支柱？其下目标将变为「不挂靠」。')) return;
+  vvm.missions = vvm.missions.filter(x => x.id !== id);
+  await saveVVM();
+  render();
+}
+
+/* ---------- 目标挂靠 ---------- */
+function renderMapping() {
+  const missions = vvm.missions || [];
+  const objs = all.filter(g => g.level === '目标O' && !['已完成', '已放弃'].includes(g.status));
+  if (!objs.length) return '<div class="empty" style="padding:30px 0">还没有进行中的目标 🎯</div>';
+  if (!missions.length) return '<div class="empty" style="padding:30px 0">还没有愿景支柱，先在上方创建愿景支柱，再给目标挂靠</div>';
+  return objs.map(o => {
+    const m = missions.find(x => x.id === o.missionId);
+    const opts = missions.map(x => `<option value="${x.id}" ${x.id === o.missionId ? 'selected' : ''}>${esc(x.title)}</option>`).join('');
+    return `<div class="map-row">
+      <span class="map-name">${esc(o.name)}</span>
+      <span class="map-prio ${o.priority || ''}">${o.priority || '—'}</span>
+      <select class="map-select" onchange="mapMission('${o.id}', this.value)">
+        <option value="">不挂靠</option>
+        ${opts}
+      </select>
+    </div>`;
+  }).join('');
+}
+async function mapMission(goalId, missionId) {
+  await fetch(API + '/goals/' + goalId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ missionId }) });
+  toast('已更新挂靠 ✓');
+  load();
+}
+
+async function saveVVM() {
+  await fetch(API + '/vvm', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(vvm) });
+}
+
+window.__appReload = load;
+load();
+</script>
+</body>
+</html>
