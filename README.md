@@ -15,6 +15,16 @@
   <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/ChanceEix/goal-coach-local?style=flat&color=informational" />
 </p>
 
+<p align="center">
+  <b>🔗 <a href="https://chanceeix.github.io/goal-coach-local/">在线预览（静态版）</a></b>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/ChanceEix/goal-coach-local">GitHub 仓库</a>
+  &nbsp;·&nbsp;
+  <a href="./docs/README.md">完整文档</a>
+</p>
+
+> 预览站是**纯静态展示**（界面截图 + 功能介绍），不能真实操作数据。想真正用起来，请按下方「快速开始」在你自己电脑上运行。
+
 ## 核心主张 · 为什么可以放心用
 
 > **你的数据，只属于你。**
